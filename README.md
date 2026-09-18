@@ -1,5 +1,7 @@
 Bhoomi Setu – Land Record Digitization & Validation System
 
+
+
 A full-stack land record digitization and validation platform developed as a team project.
 
 Project Type: Team Project
