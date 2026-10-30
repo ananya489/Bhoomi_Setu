@@ -1,606 +1,382 @@
-Bhoomi Setu – Land Record Digitization & Validation System
-
-
-
-A full-stack land record digitization and validation platform developed as a team project.
-
-Project Type: Team Project
-
-Overview
-
-Land records in many Indian jurisdictions still exist primarily as scanned paper documents, often in regional languages, distributed across state, district, and tehsil (sub-district) offices. Manually transcribing and cross-checking these records is slow and error-prone, and there is typically no reliable, tamper-evident history of how a record has changed over time.
-
-Bhoomi Setu is a land record digitization and validation system that addresses this problem end to end. Officials upload scanned land-record documents through a web frontend; the backend processes them through an OCR pipeline built on the Mistral OCR API and extracts structured fields such as owner name, khasra number, khata number, village, tehsil, district, and state.
-
-Extracted fields carry confidence scores. Documents that fall below a configurable confidence threshold are routed for manual review rather than being accepted automatically. Once validated, the extracted data can be used for land-record transactions such as ownership transfers and parcel subdivisions.
-
-The system also provides role-based, jurisdiction-scoped access. State, district, and tehsil-level officials are restricted to their assigned jurisdiction, while verification officers are restricted to records assigned to them. These restrictions are enforced by the backend at the database-query level.
-
-Tech Highlights
-
-React + TypeScript + Vite frontend
-
-FastAPI + Python backend
-
-MongoDB with PyMongo
-
-Mistral OCR for document processing
-
-JWT authentication + bcrypt password hashing
-
-Role-Based Access Control (RBAC)
-
-Jurisdiction-scoped data access and anti-IDOR protections
-
-Confidence-based OCR review workflow
-
-SHA-256 hash-chained record history
-
-Multi-language UI with i18next
-
-Pytest-based automated testing
-
-S3-compatible document storage with local fallback
-
-Key Features
-
-Authentication & Authorization
-
-Signup and login with bcrypt-hashed passwords
-
-JWT-based authentication with short-lived access tokens and longer-lived, individually revocable refresh tokens
-
-Seven roles: super_admin, state_admin, district_admin, tehsil_officer, verification_officer, auditor, and citizen
-
-Explicit permissions including UPLOAD_DOCUMENT, PROCESS_DOCUMENT, VIEW_RECORD, EDIT_RECORD, VERIFY_RECORD, APPROVE_RECORD, EXPORT_DATA, VIEW_AUDIT, and MANAGE_USERS
-
-Jurisdiction-based access control across state, district, and tehsil levels
-
-Verification officers are scoped to records explicitly assigned to them
-
-Backend-enforced single-record access checks help prevent IDOR-style access through guessed IDs
-
-Land Record Management
-
-Scoped land-record listing and search
-
-Record editing and approval workflows
-
-Public land-record search and lookup by public record number
-
-Permission-gated access to record operations
-
-Document Processing & OCR
-
-Document upload with file-type and size validation
-
-OCR through a dedicated Python pipeline using the Mistral OCR API
-
-Structured extraction of owner name, relative/father-husband name, village, tehsil, district, state, tauzi number, khata number, and khasra number
-
-Hindi and English label matching
-
-Per-field and overall confidence scoring
-
-Configurable accept/review thresholds
-
-Automatic Hindi/English document language detection
-
-Manual review queues for low-confidence documents
-
-Transactions & Verification
-
-Ownership-transfer/sale transactions
-
-Parcel subdivision into child khasra numbers
-
-Area-consistency validation before transaction commitment
-
-Transaction history by khasra number, owner, or transaction ID
-
-Combined ownership/provenance history for a khasra number
-
-Verification-officer workflow for low-confidence records
-
-Corrected-field submission and record rejection
-
-Auditor access to audit information and compliance reports
-
-Record Integrity & Audit
-
-Application-level SHA-256 hash-chained history of master-record changes
-
-Each change is linked to the previous history entry
-
-Current records can be verified against their recorded hash chain to detect tampering
-
-Multi-stage governance workflow for master-record deletion requests
-
-Immutable audit-log retrieval for auditors
-
-Note: Bhoomi Setu uses an application-level hash chain for record integrity. It is not a distributed or consensus-based blockchain network.
-
-Administration & Localization
-
-Role-scoped user administration
-
-State-level and district-level analytics
-
-Officer and verification workflow management
-
-Multi-language frontend using i18next/react-i18next
-
-Interface translations for English, Hindi, Bengali, Gujarati, Kannada, Malayalam, Marathi, Odia, Tamil, Telugu, and Urdu
-
-Why Bhoomi Setu?
-
-The project goes beyond a conventional CRUD application by combining:
-
-OCR-driven document processing
-
-Structured information extraction
-
-Confidence-based human review
-
-Backend-enforced RBAC
-
-Jurisdiction-aware data isolation
-
-Land-record transaction validation
-
-Tamper-evident record history
-
-Multi-language frontend support
-
-Automated security and workflow testing
-
-System Architecture
-
+# Bhoomi Setu
+
+### Land Record Digitization & Validation System
+
+Bhoomi Setu is a full-stack platform for digitizing, reviewing,
+validating, and managing land records. Authorized users upload scanned
+documents; a dedicated OCR pipeline uses the Mistral OCR API to extract
+structured fields, calculate confidence information, and route uncertain
+results for manual review.
+
+The platform combines OCR-based document processing with role-based
+access control, jurisdiction-scoped data access, land-record transaction
+workflows, and tamper-evident record history.
+
+**Project type:** Team project\
+**Repository:** https://github.com/ananya489/Bhoomi_Setu
+
+------------------------------------------------------------------------
+
+## Table of Contents
+
+-   [Problem](#problem)
+-   [Solution Overview](#solution-overview)
+-   [Key Features](#key-features)
+-   [Workflow](#workflow)
+-   [Technology Stack](#technology-stack)
+-   [Architecture](#architecture)
+-   [Roles and Access Control](#roles-and-access-control)
+-   [OCR Pipeline](#ocr-pipeline)
+-   [Transactions and Record
+    Integrity](#transactions-and-record-integrity)
+-   [Localization](#localization)
+-   [Project Structure](#project-structure)
+-   [Getting Started](#getting-started)
+-   [Run the Application](#run-the-application)
+-   [API Documentation](#api-documentation)
+-   [Testing](#testing)
+-   [Security](#security)
+-   [Limitations and Future Work](#limitations-and-future-work)
+-   [Team](#team)
+-   [License](#license)
+
+## Problem
+
+Land records in many Indian jurisdictions are maintained as scanned
+paper documents and historical records distributed across state,
+district, and tehsil offices. Manually reading, transcribing, and
+cross-checking these documents can be time-consuming and error-prone.
+
+Bhoomi Setu helps convert scanned land-record documents into structured
+digital information, provides a review path for uncertain OCR results,
+and maintains a traceable history of master-record changes.
+
+## Solution Overview
+
+1.  An authorized user uploads a land-record document.
+2.  The backend validates the file and stores it.
+3.  The OCR pipeline processes it using the Mistral OCR API.
+4.  OCR output is normalized and mapped to standard land-record fields.
+5.  Field-level and overall confidence information is calculated.
+6.  Results below configured confidence thresholds are routed for manual
+    review.
+7.  Authorized officials review records and perform supported
+    land-record operations.
+8.  Master-record changes are added to a SHA-256 hash chain.
+
+The system does not treat uncertain OCR output as automatically reliable
+data.
+
+## Key Features
+
+### Document processing
+
+-   File type, size, and content validation.
+-   OCR through a dedicated Python pipeline using the Mistral OCR API.
+-   Structured extraction of land-record fields.
+-   Hindi and English label matching and language detection.
+-   Field-level and overall confidence scoring.
+-   Configurable confidence thresholds and manual review queues.
+
+### Land-record management
+
+-   Jurisdiction-scoped listing and search.
+-   Record editing and approval workflows.
+-   Public record lookup by public record number.
+-   Permission-gated record operations.
+
+### Verification and transactions
+
+-   Verification queues for low-confidence records.
+-   Corrected-field submission and record rejection.
+-   Ownership-transfer/sale transactions.
+-   Parcel subdivision into child Khasra numbers.
+-   Area-consistency validation before transaction commitment.
+-   Transaction and ownership/provenance history.
+
+### Authentication and authorization
+
+-   JWT authentication and bcrypt password hashing.
+-   Short-lived access tokens and individually revocable refresh tokens.
+-   Seven application roles and explicit permissions.
+-   State, district, and tehsil jurisdiction scoping.
+-   Verification-officer access limited to assigned records.
+-   Backend-enforced single-record access checks to help prevent
+    IDOR-style access.
+
+### Record integrity and audit
+
+-   Application-level SHA-256 hash-chained record history.
+-   Each history entry links to the previous entry.
+-   Record integrity verification against recorded hash-chain
+    information.
+-   Staged approval workflow for master-record deletion requests.
+-   Auditor access to audit information and compliance reports.
+
+> **Important:** Bhoomi Setu currently uses an application-level SHA-256
+> hash chain. It is not a distributed, consensus-based blockchain
+> network.
+
+## Workflow
+
+``` mermaid
 flowchart TD
-    User[Citizen / Officer / Admin]
-    FE[React + TypeScript + Vite]
-    API[FastAPI REST API]
-    AUTH[JWT Authentication + bcrypt]
-    RBAC[RBAC + Jurisdiction Scoping]
-    SVC[Service Layer]
-    DB[(MongoDB)]
-    STORE[S3-compatible / Local Storage]
-    OCR[Land Record OCR Pipeline]
-    MISTRAL[Mistral OCR API]
-    CHAIN[SHA-256 Hash-Chained History]
-
-    User --> FE
-    FE -->|REST calls| API
-    API --> AUTH
-    AUTH --> RBAC
-    RBAC --> SVC
-    SVC --> DB
-    SVC --> STORE
-    SVC -->|Document processing| OCR
-    OCR --> MISTRAL
-    OCR -->|Structured fields| SVC
-    SVC --> CHAIN
-    CHAIN --> DB
-
-Architecture Overview
-
-Frontend: React 19 + TypeScript single-page application built with Vite, with role-aware routing and typed API service modules.
-
-Backend: FastAPI application exposing a versioned REST API under /api/v1, with role-specific routers and shared authentication, authorization, document, record, validation, and transaction modules.
-
-Authorization: Permission checks and jurisdiction scoping are centralized and reused across backend routes rather than being implemented independently in each endpoint.
-
-Database: MongoDB accessed through pymongo, with indexes configured for users, documents, roles/permissions, refresh tokens, processing jobs, audit logs, transactions, and master land records.
-
-Document Storage: S3-compatible object storage through boto3, with a local filesystem fallback for development.
-
-OCR Pipeline: A standalone Python package that validates documents, calls Mistral OCR, normalizes the response, detects language, extracts canonical land-record fields, and produces confidence information.
-
-End-to-End Workflow
-
-A user authenticates through the frontend.
-
-The backend issues an access token and a revocable refresh token.
-
-An authorized user uploads a scanned land-record document.
-
-The backend validates the file and stores it using S3-compatible storage or the local fallback.
-
-A document record and processing job are created in MongoDB.
-
-The OCR pipeline sends the document to the Mistral OCR API.
-
-Raw OCR output is normalized into a consistent internal representation.
-
-Canonical land-record fields are extracted using Hindi/English label matching.
-
-Field-level confidence values are calculated and combined into an overall confidence value.
-
-Based on configured thresholds, the document is accepted or marked for review.
-
-Low-confidence documents enter the appropriate manual verification workflow.
-
-Validated information can be used for ownership-transfer or subdivision transactions.
-
-Master-record changes are added to the SHA-256 hash chain.
-
-Access to records remains restricted according to role and jurisdiction.
-
-OCR & Document Processing Pipeline
-
-The OCR pipeline is implemented as a standalone package under:
-
-Land_Record_Mistral_OCR_Final_fixed (2)/
-└── Land_Record_Mistral_OCR_Final_fixed/
-    └── Land_Record_Mistral_OCR_Final_build/
-        ├── src/land_ocr/
-        └── tests/
-
-Module
-
-Responsibility
-
-validation.py
-
-Validates input files, extensions, size, existence, and non-empty content
-
-mistral_client.py
-
-Handles Mistral OCR API file upload and OCR requests
-
-pipeline.py
-
-Orchestrates validation, OCR, normalization, extraction, language detection, hashing, and result assembly
-
-normalizer.py
-
-Converts raw OCR blocks/tables/pages into a consistent internal structure
-
-extraction.py
-
-Maps OCR output to canonical land-record fields using Hindi/English labels
-
-config.py
-
-Reads OCR configuration and environment variables
-
-cli.py / __main__.py
-
-Provides command-line execution
-
-api.py
-
-Provides a thin standalone interface around the pipeline
-
-Supported land-record fields include owner name, relative/father-husband name, village, tehsil, district, state, tauzi number, khata number, and khasra number.
-
-When a Mistral API key is not configured, the repository supports development using pre-processed sample OCR output where applicable.
-
-Authentication & RBAC
-
-Authentication
-
-Passwords are hashed using bcrypt.
-
-Login issues JWT access and refresh tokens.
-
-Refresh tokens are tracked server-side using a unique jti, allowing independent revocation.
-
-Requests use Bearer-token authentication.
-
-Authentication dependencies validate token type and active-user status.
-
-Roles
-
-super_admin
-state_admin
-district_admin
-tehsil_officer
-verification_officer
-auditor
-citizen
-
-Jurisdiction Scoping
-
-State, district, and tehsil officials are restricted to their assigned jurisdiction. Verification officers are restricted to records explicitly assigned to them.
-
-The backend combines the requested record ID with the user's scope filter when performing single-record lookups. This prevents users from accessing another jurisdiction's data simply by obtaining or guessing a valid record ID.
-
-Backend Architecture
-
-app/
-├── main.py
-├── api/
-│   ├── deps.py
-│   └── routes/
-├── core/
-│   ├── config.py
-│   ├── database.py
-│   ├── security.py
-│   ├── permissions.py
-│   └── scope.py
-├── models/
-├── schemas/
-└── services/
-
-Important Components
-
-Component
-
-Responsibility
-
-core/permissions.py
-
-Role-permission mapping and permission dependencies
-
-core/scope.py
-
-Jurisdiction filters and scoped single-record access
-
-core/security.py
-
-Password hashing and JWT operations
-
-services/ocr_service.py
-
-Backend integration with the OCR pipeline
-
-services/transaction_service.py
-
-Transactions, subdivisions, and ownership history
-
-services/blockchain_service.py
-
-Existing hash-chain record-integrity implementation
-
-services/storage_service.py
-
-S3-compatible storage and local fallback
-
-Frontend Architecture
-
-The frontend is a React 19 + TypeScript application built with Vite and Tailwind CSS, using React Router.
-
-Pages
-
-Pages are organized around major workflows:
-
-Login / Signup
-
-Dashboard
-
-Documents: upload, OCR viewer, extraction viewer, processing status, review, validation
-
-Records: search, details, public search
-
-Verification: task queue, verification workspace, completed verifications
-
-Administration
-
-Analytics
-
-Audit
-
-Settings
-
-Services
-
-The frontend contains typed API service modules for backend domains such as:
-
-auth.service.ts
-document.service.ts
-record.service.ts
-transaction.service.ts
-validation.service.ts
-verification.service.ts
-admin.service.ts
-audit.service.ts
-dashboard.service.ts
-extraction.service.ts
-processing.service.ts
-
-Localization
-
-Localization is implemented with i18next and react-i18next, with translation files under src/locales/.
-
-Database & Storage
-
-MongoDB
-
-MongoDB is the primary database and is accessed through pymongo.
-
-The backend configures indexes for collections including users, roles, permissions, documents, refresh_tokens, processing_jobs, audit_logs, transaction, and master_records.
-
-Document Storage
-
-Documents can be stored using an S3-compatible object-storage service through boto3.
-
-For local development, the application can use a filesystem fallback under the configured local storage directory.
-
-Transactions & Record History
-
-Transactions
-
-Land-record transactions support:
-
-Ownership transfer/sale
-
-Parcel subdivision
-
-Parent-to-child khasra relationships
-
-Area-consistency validation
-
-Transaction lookup by ID, khasra number, and owner
-
-Ownership/provenance history
-
-Record Integrity
-
-Master-record changes are represented using an application-level SHA-256 hash chain.
-
-Each history entry is linked to the previous entry's hash. The current record can be checked against its recorded chain information to detect modifications.
-
-This approach provides application-level tamper evidence without requiring a distributed blockchain network.
-
-Deletion Governance
-
-Master-record deletion is handled through a staged request and approval workflow rather than an unrestricted destructive delete.
-
-Testing
-
-Testing uses pytest.
-
-Backend Tests
-
-tests/
-├── conftest.py
-├── test_phase1_critical.py
-├── test_rbac_scoping.py
-├── test_signup.py
-└── test_transactions.py
-
-These tests cover areas such as authentication, role behavior, jurisdiction scoping, anti-IDOR checks, CORS configuration, signup behavior, and transaction validation.
-
-OCR Pipeline Tests
-
-Land_Record_Mistral_OCR_Final_build/
-└── tests/
-    ├── test_extraction.py
-    ├── test_extraction_actual.py
-    ├── test_extraction_land_record1.py
-    ├── test_normalizer.py
-    ├── test_validation.py
-    └── test_mistral_sample.py
-
-Run Backend Tests
-
-pytest
-
-Run OCR Tests
-
-cd "Land_Record_Mistral_OCR_Final_fixed (2)/Land_Record_Mistral_OCR_Final_fixed/Land_Record_Mistral_OCR_Final_build"
-pytest
-
-Tech Stack
-
-Layer
-
-Technology
-
-Purpose
-
-Backend
-
-FastAPI + Python
-
-REST API and backend workflows
-
-Database
-
-MongoDB + pymongo
-
-Primary data store
-
-Authentication
-
-JWT + bcrypt
-
-Authentication and password security
-
-Object Storage
-
-boto3 + S3-compatible storage
-
-Document storage
-
-OCR
-
-Mistral OCR API
-
-Document OCR
-
-Frontend
-
-React 19 + TypeScript
-
-User interface
-
-Build Tool
-
-Vite
-
-Frontend development/build
-
-Styling
-
-Tailwind CSS
-
-UI styling
-
-Routing
-
-React Router
-
-Frontend navigation
-
-Localization
-
-i18next / react-i18next
-
-Multi-language interface
-
-Testing
-
-Pytest
-
-Automated backend/OCR testing
-
-Setup & Installation
-
-Prerequisites
-
-Python 3.11+
-
-Node.js and npm
-
-MongoDB local instance or MongoDB Atlas
-
-Mistral API key for live OCR
-
-Clone
-
+    A[User signs in] --> B[Authorized document upload]
+    B --> C[File validation and storage]
+    C --> D[OCR using Mistral OCR API]
+    D --> E[Normalize OCR output]
+    E --> F[Extract land-record fields]
+    F --> G[Calculate confidence scores]
+    G --> H{Meets configured threshold?}
+    H -- Yes --> I[Continue through authorized record workflow]
+    H -- No --> J[Manual verification queue]
+    J --> K[Officer reviews, corrects, or rejects]
+    K --> I
+    I --> L[Supported record operations and validation]
+    L --> M[Update master record]
+    M --> N[Append SHA-256 hash-chain history]
+    N --> O[Audit and integrity verification]
+```
+
+## Technology Stack
+
+  Layer            Technology                     Purpose
+  ---------------- ------------------------------ --------------------------------------
+  Frontend         React 19, TypeScript           Web application
+  Build tool       Vite                           Frontend development and build
+  Styling          Tailwind CSS                   UI styling
+  Routing          React Router                   Frontend navigation
+  Backend          Python, FastAPI                REST API and workflows
+  Database         MongoDB, PyMongo               Primary application database
+  Authentication   JWT, bcrypt                    Authentication and password security
+  OCR              Mistral OCR API                Document text recognition
+  Object storage   boto3, S3-compatible storage   Document storage
+  Local storage    Filesystem fallback            Local development storage
+  Localization     i18next, react-i18next         Multilingual interface
+  Testing          pytest                         Automated tests
+
+## Architecture
+
+``` mermaid
+flowchart TD
+    U[Citizen / Officer / Admin] --> FE[React + TypeScript + Vite]
+    FE --> API[FastAPI REST API]
+    API --> AUTH[JWT Authentication]
+    AUTH --> ACCESS[RBAC + Jurisdiction Scoping]
+    ACCESS --> SERVICE[Backend Service Layer]
+    SERVICE --> DB[(MongoDB)]
+    SERVICE --> STORAGE[S3-compatible / Local Storage]
+    SERVICE --> OCR[Standalone OCR Pipeline]
+    OCR --> MISTRAL[Mistral OCR API]
+    OCR -->|Structured fields and confidence| SERVICE
+    SERVICE --> HASH[SHA-256 Hash-Chained History]
+    HASH --> DB
+```
+
+-   **Frontend:** React and TypeScript single-page application with
+    role-aware routing and typed API service modules.
+-   **Backend:** FastAPI application exposing a versioned REST API under
+    `/api/v1`.
+-   **Authorization:** Centralized permission checks and
+    jurisdiction-scoping logic.
+-   **Database:** MongoDB accessed through PyMongo.
+-   **Document storage:** S3-compatible object storage through boto3,
+    with a local filesystem fallback.
+-   **OCR:** Standalone Python package for validation, OCR requests,
+    normalization, extraction, language detection, and confidence
+    information.
+-   **Record integrity:** SHA-256 hash-chain history stored as
+    application data.
+
+## Roles and Access Control
+
+The application defines seven roles:
+
+  Role                     General purpose
+  ------------------------ -------------------------------------------------------
+  `super_admin`            System administration
+  `state_admin`            State-level administration
+  `district_admin`         District-level administration
+  `tehsil_officer`         Tehsil-level land-record workflows
+  `verification_officer`   Review of assigned verification tasks
+  `auditor`                Audit and compliance access
+  `citizen`                Citizen-facing access, including public record lookup
+
+Explicit permissions include `UPLOAD_DOCUMENT`, `PROCESS_DOCUMENT`,
+`VIEW_RECORD`, `EDIT_RECORD`, `VERIFY_RECORD`, `APPROVE_RECORD`,
+`EXPORT_DATA`, `VIEW_AUDIT`, and `MANAGE_USERS`.
+
+State, district, and tehsil officials are restricted to their assigned
+jurisdiction. Verification officers are restricted to records assigned
+to them. These checks are enforced by the backend, including for
+individual record lookups. Frontend visibility is not treated as the
+security boundary.
+
+## OCR Pipeline
+
+The OCR pipeline is maintained as a standalone Python package. It
+validates input files, calls the Mistral OCR API, normalizes OCR output,
+detects language, extracts canonical land-record fields, and assembles
+confidence information.
+
+Supported fields include: - Owner name - Relative / father / husband
+name - Village, tehsil, district, and state - Tauzi number - Khata
+number - Khasra number
+
+### OCR package modules
+
+  -----------------------------------------------------------------------
+  Module                              Responsibility
+  ----------------------------------- -----------------------------------
+  `validation.py`                     Input-file validation
+
+  `mistral_client.py`                 Mistral OCR API upload and requests
+
+  `pipeline.py`                       Pipeline orchestration
+
+  `normalizer.py`                     Normalization of OCR blocks,
+                                      tables, and pages
+
+  `extraction.py`                     Canonical field extraction using
+                                      Hindi/English labels
+
+  `config.py`                         OCR configuration and environment
+                                      variables
+
+  `cli.py` / `__main__.py`            Command-line execution
+
+  `api.py`                            Standalone pipeline interface
+  -----------------------------------------------------------------------
+
+When a Mistral API key is not configured, the repository supports
+development with pre-processed sample OCR output where applicable.
+
+## Transactions and Record Integrity
+
+Supported transaction workflows include: - Ownership transfer or sale. -
+Parcel subdivision into child Khasra numbers. - Parent-to-child Khasra
+relationships. - Area-consistency validation before transaction
+commitment. - Transaction lookup by transaction ID, Khasra number, and
+owner. - Ownership and provenance history for a Khasra number.
+
+Master-record changes are represented using an application-level SHA-256
+hash chain. Each history entry links to the previous entry's hash. The
+system can compare the current record with recorded chain information to
+help detect modifications.
+
+Master-record deletion is handled through a staged request-and-approval
+workflow rather than unrestricted destructive deletion.
+
+**This is tamper-evident application-level record history, not a
+decentralized blockchain or distributed consensus network.**
+
+## Localization
+
+The frontend uses `i18next` and `react-i18next`. Interface translations
+are available for: - English - Hindi - Bengali - Gujarati - Kannada -
+Malayalam - Marathi - Odia - Tamil - Telugu - Urdu
+
+Translation files are maintained under `src/locales/` in the frontend.
+
+## Project Structure
+
+``` text
+Bhoomi_Setu/
+├── app/                                  # FastAPI backend
+│   ├── main.py
+│   ├── api/
+│   │   ├── deps.py
+│   │   └── routes/
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── security.py
+│   │   ├── permissions.py
+│   │   └── scope.py
+│   ├── models/
+│   ├── schemas/
+│   └── services/
+├── ilrdvs-frontend/                      # React + TypeScript frontend
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── locales/
+│   │   ├── routes/
+│   │   └── types/
+│   ├── package.json
+│   └── vite.config.ts
+├── Land_Record_Mistral_OCR_Final_fixed (2)/
+│   └── Land_Record_Mistral_OCR_Final_fixed/
+│       └── Land_Record_Mistral_OCR_Final_build/
+│           ├── src/land_ocr/
+│           └── tests/
+├── scripts/
+├── tests/
+├── .env.example
+├── pytest.ini
+├── requirements.txt
+├── setup_and_run.bat
+├── start.bat
+└── test_upload.html
+```
+
+## Getting Started
+
+### Prerequisites
+
+-   Python 3.11 or later
+-   Node.js and npm
+-   MongoDB local instance or MongoDB Atlas
+-   Mistral API key for live OCR processing
+
+### 1. Clone the repository
+
+``` bash
 git clone https://github.com/ananya489/Bhoomi_Setu.git
 cd Bhoomi_Setu
+```
 
-Backend
+### 2. Set up the backend environment
 
-Create and activate a virtual environment:
+Create a virtual environment:
 
+``` bash
 python -m venv .venv
+```
 
-Windows PowerShell:
+Activate it.
 
+**Windows PowerShell:**
+
+``` powershell
 .venv\Scripts\Activate.ps1
+```
 
-Linux/macOS:
+**Linux / macOS:**
 
+``` bash
 source .venv/bin/activate
+```
 
-Install dependencies:
+Install backend dependencies:
 
+``` bash
 pip install -r requirements.txt
+```
 
-Environment Variables
+### 3. Configure environment variables
 
-Copy .env.example to .env and configure the required values.
+Copy `.env.example` to `.env` and configure the values for your
+environment.
 
-Typical configuration includes:
+Example:
 
+``` env
 MONGODB_URI=your_mongodb_connection_string
 MONGODB_DB_NAME=land_records
 
-SECRET_KEY=your_secret_key
+SECRET_KEY=replace_with_a_secure_random_secret
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
@@ -617,87 +393,105 @@ USE_LOCAL_STORAGE_FALLBACK=True
 LOCAL_STORAGE_DIR=./storage
 
 ALLOWED_ORIGINS=http://localhost:5173
+```
 
-Do not commit real credentials or secrets.
+Use the configuration required by your environment. S3 settings are for
+S3-compatible storage; local filesystem fallback is available for
+development.
 
-Run Backend
+**Never commit `.env` files, API keys, database credentials, JWT
+secrets, or storage credentials.**
 
-python -m uvicorn app.main:app --reload --port 8000
+### 4. Install frontend dependencies
 
-Run Frontend
-
+``` bash
 cd ilrdvs-frontend
 npm install
+```
+
+## Run the Application
+
+Open separate terminals from the repository root.
+
+### Backend
+
+Activate the virtual environment, then run:
+
+``` bash
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+### Frontend
+
+``` bash
+cd ilrdvs-frontend
 npm run dev
+```
 
-Run Both on Windows
+The Vite development server prints the local frontend URL in the
+terminal.
 
-The repository includes start.bat, which launches the backend and frontend in separate terminal windows.
+### Windows shortcut
 
-API Documentation
+The repository includes `start.bat`, which launches the backend and
+frontend in separate terminal windows. It also includes
+`setup_and_run.bat` for setup assistance.
 
-Once the backend is running, interactive Swagger documentation is available at:
+## API Documentation
+
+The backend exposes a versioned REST API under `/api/v1`.
+
+When the backend is running locally, interactive Swagger documentation
+is available at:
 
 http://127.0.0.1:8000/docs
 
-API Overview
+### API areas
 
-All API endpoints are served under the /api/v1 prefix.
+  -----------------------------------------------------------------------
+  Area                                Purpose
+  ----------------------------------- -----------------------------------
+  Authentication                      Signup, login, token refresh,
+                                      logout, current-user profile
 
-Area
+  Documents                           Upload, listing, status/detail
+                                      retrieval, OCR results, document
+                                      operations
 
-Purpose
+  Records                             Scoped listing, retrieval, editing,
+                                      approval
 
-Auth
+  Transactions                        Ownership transfers, subdivisions,
+                                      transaction/history queries
 
-Signup, login, token refresh, logout, current-user profile
+  Validation                          Validation results, field
+                                      validation, officer decisions
 
-Documents
+  Public portal                       Public record search and lookup
 
-Upload, listing, status/detail retrieval, OCR results, document operations
+  Tehsil Officer                      Dashboard, upload, OCR review,
+                                      approval workflows
 
-Records
+  Verification Officer                Low-confidence tasks,
+                                      corrected-field submission,
+                                      rejection
 
-Scoped listing, retrieval, editing, approval
+  Administration                      User/role management, dashboards,
+                                      analytics
 
-Transactions
+  Auditor                             Audit logs, integrity verification,
+                                      compliance reports
 
-Ownership transfers, subdivisions, transaction/history queries
+  Record integrity                    Hash-chain verification and history
+                                      retrieval
 
-Validation
+  Integrity governance                Multi-stage master-record deletion
+                                      requests
+  -----------------------------------------------------------------------
 
-Validation results, field validation, officer decisions
+### Representative endpoints
 
-Public Portal
-
-Public record search and lookup
-
-Tehsil Officer
-
-Dashboard, upload, OCR review, approval workflows
-
-Verification Officer
-
-Low-confidence tasks, corrected-field submission, rejection
-
-Administration
-
-User/role management, dashboards, analytics
-
-Auditor
-
-Audit logs, integrity verification, compliance reports
-
-Record Integrity
-
-Hash-chain verification and history retrieval
-
-Integrity Governance
-
-Multi-stage master-record deletion requests
-
-Representative Endpoints
-
+``` http
 POST /api/v1/auth/login
 POST /api/v1/auth/signup
 POST /api/v1/auth/refresh
@@ -713,158 +507,88 @@ GET  /api/v1/transactions/khasra/{khasra_number}/history
 
 GET  /api/v1/blockchain/records/{record_id}/verify
 GET  /api/v1/auditor/audit-logs
+```
 
-The /blockchain/ path remains in the API because it reflects the repository's existing implementation naming. The underlying mechanism is the application's SHA-256 hash chain, not a distributed blockchain.
+The `/blockchain/` route prefix reflects existing API naming. The
+underlying implementation is a SHA-256 hash chain, not a distributed
+blockchain.
 
-Engineering Highlights
+## Testing
 
-Centralized authorization: permission checks and jurisdiction scoping are implemented centrally and reused across routes.
+The project uses `pytest` for backend and OCR-pipeline tests.
 
-Backend-enforced data isolation: authorization is applied at the API/database layer rather than relying only on frontend visibility.
+### Backend tests
 
-Anti-IDOR protection: scoped filters are applied to single-record lookups as well as collection queries.
+Run from the repository root:
 
-Decoupled OCR pipeline: OCR processing is maintained as an independent package with its own test suite.
+``` bash
+pytest
+```
 
-Confidence-driven review: low-confidence OCR results can be routed for human verification.
+### OCR pipeline tests
 
-Tamper-evident history: master-record changes are linked through SHA-256 hashes.
+``` bash
+cd "Land_Record_Mistral_OCR_Final_fixed (2)/Land_Record_Mistral_OCR_Final_fixed/Land_Record_Mistral_OCR_Final_build"
+pytest
+```
 
-Governed deletion: master-record deletion follows a staged approval workflow.
+The test suites cover authentication, role behavior, jurisdiction
+scoping, anti-IDOR checks, CORS configuration, signup behavior,
+transaction validation, OCR input validation, normalization, and field
+extraction.
 
-Security-focused testing: tests cover authentication, authorization, jurisdiction boundaries, invalid tokens, and related security behavior.
+## Security
 
-Design Decisions
+-   Never commit `.env` files or real credentials.
+-   Keep `MISTRAL_API_KEY`, `SECRET_KEY`, database credentials, and
+    storage credentials out of source control.
+-   Configure CORS with explicit allowed frontend origins.
+-   Keep backend permission checks and jurisdiction scoping enabled.
+-   Do not rely on frontend visibility as the only access-control
+    mechanism.
+-   Review deployment configuration before exposing the application to
+    public networks.
 
-Modular OCR Pipeline
+## Limitations and Future Work
 
-OCR extraction is separated from API route handlers so that validation, normalization, extraction, and related logic can be tested and executed independently.
+### GIS integration
 
-Backend-Enforced Authorization
+Production GIS integration is not currently implemented as a backend
+feature. Existing cadastral-map-related frontend functionality uses
+sample data or simulated API behavior.
 
-The backend is treated as the security boundary. Frontend UI restrictions are not relied upon as the sole authorization mechanism.
+Potential future capabilities: - Interactive land-parcel maps. - Real
+parcel-boundary visualization. - Geographic coordinate storage. -
+Map-based record search. - Spatial querying. - Geospatial indexes and
+GIS-capable data services. - Integration with verified cadastral survey
+data.
 
-Structured Field Extraction
+### Other planned improvements
 
-Raw OCR output is transformed into canonical land-record fields so downstream validation, transaction, and review logic can operate on consistent field names.
+-   Public cloud deployment of the backend.
+-   CI/CD automation.
+-   Broader automated test coverage and published coverage metrics.
+-   A labeled OCR evaluation dataset.
+-   Measured OCR extraction-accuracy metrics.
+-   Structured logging and monitoring.
+-   Backend-verified analytics for dashboard data.
 
-Confidence-Based Review
+## Team
 
-OCR results include confidence information so uncertain documents can be routed for manual review instead of being treated as equally reliable.
+Bhoomi Setu is a collaborative team project involving frontend
+development, FastAPI backend services, authentication and authorization,
+OCR-based document processing, field extraction and validation,
+land-record transaction handling, record-integrity mechanisms, and
+automated testing.
 
-Hash-Chained Record History
+Individual contributor ownership is not listed because it is not
+documented in the supplied project information.
 
-Record changes are linked using SHA-256 hashes to provide application-level tamper evidence without the operational complexity of a distributed blockchain network.
+## License
 
-Team Project
+No `LICENSE` file is currently present in the repository. Until a
+license is added, the project's reuse and redistribution terms are not
+explicitly defined.
 
-Bhoomi Setu was developed as a collaborative team project.
-
-The system combines frontend development, FastAPI backend services, authentication and authorization, OCR-based document processing, field extraction and validation, land-record transaction handling, record-integrity mechanisms, and automated testing across multiple contributors.
-
-Individual contributor ownership is intentionally not listed here unless explicitly documented in the repository.
-
-Future Work
-
-GIS Integration
-
-GIS is not currently implemented as a production backend feature. The existing cadastral map-related frontend functionality uses sample data/simulated API behavior.
-
-Potential future capabilities include:
-
-Interactive land-parcel maps
-
-Real parcel boundary visualization
-
-Geographic coordinate storage
-
-Map-based record search
-
-Spatial querying
-
-GIS-capable database/geospatial indexes
-
-Integration with verified cadastral survey data
-
-Other Future Work
-
-Public cloud deployment of the backend
-
-CI/CD automation
-
-Broader automated test coverage
-
-Published test-coverage metrics
-
-Labeled OCR evaluation dataset
-
-Measured OCR extraction-accuracy metrics
-
-Structured logging and monitoring
-
-Backend-verified analytics for dashboard data
-
-Project Structure
-
-Bhoomi_Setu/
-├── app/                                  # FastAPI backend
-│   ├── main.py
-│   ├── api/
-│   │   ├── deps.py
-│   │   └── routes/
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── database.py
-│   │   ├── security.py
-│   │   ├── permissions.py
-│   │   └── scope.py
-│   ├── models/
-│   ├── schemas/
-│   └── services/
-│
-├── ilrdvs-frontend/                      # React + TypeScript frontend
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   ├── services/
-│   │   ├── locales/
-│   │   ├── routes/
-│   │   └── types/
-│   ├── package.json
-│   └── vite.config.ts
-│
-├── Land_Record_Mistral_OCR_Final_fixed (2)/
-│   └── Land_Record_Mistral_OCR_Final_fixed/
-│       └── Land_Record_Mistral_OCR_Final_build/
-│           ├── src/land_ocr/
-│           └── tests/
-│
-├── scripts/
-├── tests/
-├── .env.example
-├── pytest.ini
-├── requirements.txt
-├── setup_and_run.bat
-├── start.bat
-└── test_upload.html
-
-Security Notes
-
-Never commit .env files or real secrets.
-
-Never expose MISTRAL_API_KEY, SECRET_KEY, database credentials, or storage credentials in source control.
-
-Configure secrets through environment variables.
-
-Configure CORS with explicit allowed frontend origins.
-
-Backend permission checks and jurisdiction scoping must remain enabled in deployment.
-
-Frontend visibility should not be treated as the security boundary.
-
-License
-
-No LICENSE file is currently present in the repository.
-
-If this project is intended for public reuse, add an appropriate license file to the repository.
-
+If the project is intended for public reuse, add an appropriate license
+file.
